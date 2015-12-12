@@ -1,5 +1,6 @@
 
 from pythonforandroid.toolchain import CompiledComponentsPythonRecipe, warning
+from pythonforandroid.patching import is_arch
 
 
 class NumpyRecipe(CompiledComponentsPythonRecipe):
@@ -21,6 +22,11 @@ class NumpyRecipe(CompiledComponentsPythonRecipe):
         # AND: Fix this warning!
         warning('Numpy is built assuming the archiver name is '
                 'arm-linux-androideabi-ar, which may not always be true!')
+        if arch.arch[:3] != 'arm':
+            error('Trying to build with unsupported arch - the numpy patches need '
+                  'to be fixed to use the right archiver.')
+            exit(1)
+
 
 
 recipe = NumpyRecipe()
