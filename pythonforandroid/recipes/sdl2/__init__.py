@@ -11,6 +11,7 @@ class LibSDL2Recipe(NDKRecipe):
 
     depends = ['python2', 'sdl2_image', 'sdl2_mixer', 'sdl2_ttf']
     conflicts = ['sdl', 'pygame', 'pygame_bootstrap_components']
+    opt_depends = ['freetype_ndk', 'png']
 
     patches = ['add_nativeSetEnv.patch']
 
