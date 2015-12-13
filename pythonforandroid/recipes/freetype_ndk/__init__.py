@@ -10,5 +10,7 @@ class Freetype(NDKRecipe):
 
     patches = []
 
+    call_ndk_build = True
+
 
 recipe = Freetype()

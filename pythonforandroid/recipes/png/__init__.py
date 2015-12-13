@@ -9,5 +9,7 @@ class Libpng(NDKRecipe):
 
     patches = []
 
+    call_ndk_build = True
+
 
 recipe = Libpng()

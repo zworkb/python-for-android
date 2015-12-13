@@ -562,6 +562,8 @@ class NDKRecipe(Recipe):
 
     dir_name = None  # The name of the recipe build folder in the jni dir
 
+    call_ndk_build = False  # If True, call ndk-build with this target
+
     def get_build_container_dir(self, arch):
         return self.get_jni_dir()
 
@@ -573,6 +575,14 @@ class NDKRecipe(Recipe):
 
     def get_jni_dir(self):
         return join(self.ctx.bootstrap.build_dir, 'jni')
+
+    def build_arch(self, arch):
+        if not self.call_ndk_build:
+            return
+
+        env = self.get_recipe_env(arch)
+        with current_directory(self.get_build_container_dir(arch)):
+            shprint(sh.ndk_build, "V=1", self.dir_name, _env=env)
 
 
 class PythonRecipe(Recipe):
@@ -674,7 +684,7 @@ class CompiledComponentsPythonRecipe(PythonRecipe):
             hostpython = sh.Command(self.hostpython_location)
             if self.call_hostpython_via_targetpython:
                 shprint(hostpython, 'setup.py', 'build_ext', '-v',
-                        *self.setup_extra_args)
+                        *self.setup_extra_args, _env=env)
             else:
                 hppath = join(dirname(self.hostpython_location), 'Lib',
                               'site-packages')
