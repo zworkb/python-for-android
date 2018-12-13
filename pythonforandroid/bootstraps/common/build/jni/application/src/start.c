@@ -144,10 +144,6 @@ int main(int argc, char *argv[]) {
     #if PY_MAJOR_VERSION >= 3
         wchar_t *wchar_paths = Py_DecodeLocale(paths, NULL);
         Py_SetPath(wchar_paths);
-    #else
-        char *wchar_paths = paths;
-        LOGP("Can't Py_SetPath in python2, so crystax python2 doesn't work yet");
-        exit(1);
     #endif
 
         LOGP("set wchar paths...");
@@ -161,6 +157,9 @@ int main(int argc, char *argv[]) {
   Py_Initialize();
 
 #if PY_MAJOR_VERSION < 3
+  // Can't Py_SetPath in python2 but we can set PySys_SetPath, which must
+  // be applied after Py_Initialize rather than before like Py_SetPath
+  PySys_SetPath(paths);
   PySys_SetArgv(argc, argv);
 #endif
 
