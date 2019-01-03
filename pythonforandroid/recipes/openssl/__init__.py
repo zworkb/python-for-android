@@ -110,7 +110,7 @@ class OpenSSLRecipe(Recipe):
             #              ^
             # crypto/aes/bsaes-armv7.S:1434:14: error: immediate operand must be in the range [0,4095]
             #  sub r6, r8, #.LREVM0SR-.LSR @ pass constants
-            shprint(perl, 'Configure', 'shared', 'no-dso', 'no-asm', buildarch,
+            shprint(perl, 'Configure', 'shared', 'no-dso', 'no-asm', '-latomic', buildarch,
                     '-D__ANDROID_API__={}'.format(self.ctx.ndk_api),
                     _env=env)
             self.apply_patch('disable-sover.patch', arch.arch)
