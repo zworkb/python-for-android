@@ -143,7 +143,7 @@ public class PythonService extends Service implements Runnable {
 
     @Override
     public void run(){
-        PythonUtil.loadLibraries(PythonActivity.mActivity);
+        PythonUtil.loadLibraries(this);
         this.mService = this;
         nativeStart(
             androidPrivate, androidArgument,

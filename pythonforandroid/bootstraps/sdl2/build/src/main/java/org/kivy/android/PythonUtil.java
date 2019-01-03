@@ -4,6 +4,7 @@ import java.io.File;
 
 import android.util.Log;
 import android.app.Activity;
+import android.content.Context;
 import android.content.res.AssetManager;
 
 import java.util.ArrayList;
@@ -15,8 +16,8 @@ import java.io.IOException;
 public class PythonUtil {
 	private static final String TAG = "pythonutil";
 
-    protected static ArrayList<String> getLibraries(Activity activity) {
-        AssetManager assets = activity.getAssets();
+    protected static ArrayList<String> getLibraries(Context context) {
+        AssetManager assets = context.getAssets();
 
         StringBuilder sb = new StringBuilder();
         ArrayList<String> libsList = new ArrayList<String>();
@@ -43,11 +44,11 @@ public class PythonUtil {
         return libsList;
     }
 
-    public static void loadLibraries(Activity activity) {
+    public static void loadLibraries(Context context) {
 
         boolean foundPython = false;
 
-		for (String lib : getLibraries(activity)) {
+		for (String lib : getLibraries(context)) {
             Log.v(TAG, "Loading library: " + lib);
 		    try {
                 System.loadLibrary(lib);
