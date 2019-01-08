@@ -24,9 +24,16 @@ curdir = dirname(__file__)
 # Try to find a host version of Python that matches our ARM version.
 PYTHON = join(curdir, 'python-install', 'bin', 'python.host')
 if not exists(PYTHON):
-    print('Could not find hostpython, will not compile to .pyo '
-          '(this is normal with python2 and python3)')
     PYTHON = None
+    # try to check dist_info.json
+    with open(join(curdir, 'dist_info.json'), 'r') as fd:
+        dist_info = json.load(fd)
+    PYTHON = dist_info.get('hostpython')
+    if PYTHON:
+        print('Found hostpython in dist_info.json (at {})'.format(PYTHON))
+    else:
+        print('Could not find hostpython, will not compile to .pyo '
+            '(this is normal with python2 and python3)')
 
 BLACKLIST_PATTERNS = [
     # code versionning
@@ -36,6 +43,7 @@ BLACKLIST_PATTERNS = [
     '^*.svn/*',
 
     # pyc/py
+    '*.py',
     '*.pyc',
 
     # temp files
