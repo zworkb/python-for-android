@@ -42,6 +42,7 @@ class SDL2GradleBootstrap(Bootstrap):
             python_bundle_dir = join('_python_bundle', '_python_bundle')
             ensure_dir(python_bundle_dir)
 
+            info("Create Python bundle")
             site_packages_dir = self.ctx.python_recipe.create_python_bundle(
                 join(self.dist_dir, python_bundle_dir), arch)
 
