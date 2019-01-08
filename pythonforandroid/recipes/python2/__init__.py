@@ -32,6 +32,7 @@ class Python2Recipe(GuestPythonRecipe):
                'patches/fix-filesystem-default-encoding.patch',
                'patches/fix-locale.patch',
                'patches/fix-init-site.patch',
+               'patches/fix-python2-instsoname.patch'
                ]
 
     configure_args = ('--host={android_host}',
@@ -62,6 +63,14 @@ class Python2Recipe(GuestPythonRecipe):
             openssl_build = recipe.get_build_dir(arch.arch)
             env['OPENSSL_BUILD'] = openssl_build
             env['OPENSSL_VERSION'] = recipe.version
+
+            # XXX got issue with atomic?
+            # .../openssl/libcrypto1.1.so: error: undefined reference to '__atomic_fetch_add_4'
+            # .../openssl/libcrypto1.1.so: error: undefined reference to '__atomic_fetch_sub_4'
+            # .../openssl/libcrypto1.1.so: error: undefined reference to '__atomic_store'
+            # .../openssl/libcrypto1.1.so: error: undefined reference to '__atomic_load'
+            # .../openssl/libcrypto1.1.so: error: undefined reference to '__atomic_is_lock_free'
+            env['LDFLAGS'] += ' -latomic'
         return env
 
 

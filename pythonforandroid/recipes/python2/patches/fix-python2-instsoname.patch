@@ -1,0 +1,10 @@
+--- a/configure	2019-01-08 09:55:21.552820223 +0100
++++ b/configure	2019-01-08 09:55:28.752658401 +0100
+@@ -5490,7 +5490,6 @@
+ 		SOVERSION=`echo $SOVERSION|cut -d "." -f 1`
+ 		;;
+ 	  esac
+-	  INSTSONAME="$LDLIBRARY".$SOVERSION
+ 	  ;;
+     hp*|HP*)
+ 	  case `uname -m` in
