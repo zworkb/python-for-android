@@ -36,7 +36,7 @@ class NumpyRecipe(CompiledComponentsPythonRecipe):
             flags += " -I{}".format(join(src_dir, 'crystax', 'include'))
             flags += " -L{}".format(join(src_dir, 'crystax', 'libs', arch.arch))
         flags += ' -I{}'.format(py_inc_dir)
-        flags += ' -L{} -lpython{}'.format(py_lib_dir, py_ver)
+        flags += ' -L{} -lpython{} -lc'.format(py_lib_dir, py_ver)
         if 'python3' in self.ctx.python_recipe.name:
             flags += 'm'
 
