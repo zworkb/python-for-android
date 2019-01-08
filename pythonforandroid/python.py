@@ -7,6 +7,7 @@ from os.path import dirname, exists, join
 from os import environ
 import glob
 import sh
+from shutil import copy2
 
 from pythonforandroid.recipe import Recipe, TargetPythonRecipe
 from pythonforandroid.logger import logger, info, error, shprint
@@ -344,16 +345,19 @@ class GuestPythonRecipe(TargetPythonRecipe):
                 '2' if self.version[0] == '2' else '',
                 self.major_minor_version_string
             ))
-        module_filens = (glob.glob(join(modules_build_dir, '*.so')) +
+        module_filens = list(glob.glob(join(modules_build_dir, '*.so')) +
                          glob.glob(join(modules_build_dir, '*.py')))
+        info("Copy {} files into the bundle".format(len(module_filens)))
         for filen in module_filens:
-            shprint(sh.cp, filen, modules_dir)
+            info(" - copy {}".format(filen))
+            copy2(filen, modules_dir)
 
         # zip up the standard library
         stdlib_zip = join(dirn, 'stdlib.zip')
         with current_directory(join(self.get_build_dir(arch.arch), 'Lib')):
-            stdlib_filens = walk_valid_filens(
-                '.', self.stdlib_dir_blacklist, self.stdlib_filen_blacklist)
+            stdlib_filens = list(walk_valid_filens(
+                '.', self.stdlib_dir_blacklist, self.stdlib_filen_blacklist))
+            info("Zip {} files into the bundle".format(len(stdlib_filens)))
             shprint(sh.zip, stdlib_zip, *stdlib_filens)
 
         # copy the site-packages into place
@@ -364,9 +368,11 @@ class GuestPythonRecipe(TargetPythonRecipe):
             filens = list(walk_valid_filens(
                 '.', self.site_packages_dir_blacklist,
                 self.site_packages_filen_blacklist))
+            info("Copy {} files into the site-packages".format(len(filens)))
             for filen in filens:
+                info(" - copy {}".format(filen))
                 ensure_dir(join(dirn, 'site-packages', dirname(filen)))
-                sh.cp(filen, join(dirn, 'site-packages', filen))
+                copy2(filen, join(dirn, 'site-packages', filen))
 
         # copy the python .so files into place
         python_build_dir = join(self.get_build_dir(arch.arch),
@@ -375,8 +381,9 @@ class GuestPythonRecipe(TargetPythonRecipe):
         if self.major_minor_version_string[0] == '3':
             python_lib_name += 'm'
         for lib in [python_lib_name + '.so', python_lib_name + '.so.1.0']:
-            shprint(sh.cp, join(python_build_dir, lib),
-                    'libs/{}'.format(arch.arch))
+            filename = join(python_build_dir, lib)
+            if exists(filename):
+                shprint(sh.cp, filename, 'libs/{}'.format(arch.arch))
 
         info('Renaming .so files to reflect cross-compile')
         self.reduce_object_file_names(join(dirn, 'site-packages'))
