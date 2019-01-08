@@ -16,10 +16,6 @@ renpy_sound = Extension('android._android_sound',
 modules = [Extension('android._android',
                      ['android/_android.c', 'android/_android_jni.c'],
                      libraries=sdl_libs + ['log'],
-                     library_dirs=library_dirs),
-           Extension('android._android_billing',
-                     ['android/_android_billing.c', 'android/_android_billing_jni.c'],
-                     libraries=['log'],
                      library_dirs=library_dirs)]
 
 if int(os.environ['IS_PYGAME']):
