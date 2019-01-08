@@ -863,8 +863,20 @@ class CompiledComponentsPythonRecipe(PythonRecipe):
             shprint(hostpython, 'setup.py', self.build_cmd, '-v',
                     _env=env, *self.setup_extra_args)
             build_dir = glob.glob('build/lib.*')[0]
-            shprint(sh.find, build_dir, '-name', '"*.o"', '-exec',
+            shprint(sh.find, build_dir, '-name', '".o', '-exec',
                     env['STRIP'], '{}', ';', _env=env)
+            info('Stripping object files')
+            shprint(sh.find, '.', '-iname', '*.o', '-exec',
+                    '/usr/bin/echo', '{}', ';', _env=env)
+            shprint(sh.find, '.', '-iname', '*.o', '-exec',
+                    env['STRIP'].split(' ')[0], '--strip-unneeded',
+                    '{}', ';', _env=env)
+            shprint(sh.find, '.', '-iname', '*.so', '-exec',
+                    '/usr/bin/echo', '{}', ';', _env=env)
+            shprint(sh.find, '.', '-iname', '*.so', '-exec',
+                    env['STRIP'].split(' ')[0], '--strip-unneeded',
+                    '{}', ';', _env=env)
+
 
     def install_hostpython_package(self, arch):
         env = self.get_hostrecipe_env(arch)
