@@ -31,6 +31,7 @@ class Python2Recipe(GuestPythonRecipe):
                'patches/fix-missing-extensions.patch',
                'patches/fix-filesystem-default-encoding.patch',
                'patches/fix-locale.patch',
+               'patches/fix-gethostbyaddr.patch',
                'patches/fix-init-site.patch',
                'patches/fix-python2-instsoname.patch'
                ]
