@@ -1,0 +1,10 @@
+--- a/numpy/core/setup_common.py  2019-01-08 00:21:05.012501539 +0100
++++ b/numpy/core/setup_common.py  2019-01-08 00:21:15.532266407 +0100
+@@ -189,7 +189,7 @@
+     ]
+ C99_COMPLEX_FUNCS = [
+     "cabs", "cacos", "cacosh", "carg", "casin", "casinh", "catan",
+-    "catanh", "ccos", "ccosh", "cexp", "cimag", "clog", "conj", "cpow",
++    "catanh", "ccos", "ccosh", "cexp", "cimag", "clog", "conj",
+     "cproj", "creal", "csin", "csinh", "csqrt", "ctan", "ctanh"
+     ]

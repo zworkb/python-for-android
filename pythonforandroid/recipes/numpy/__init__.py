@@ -16,7 +16,8 @@ class NumpyRecipe(CompiledComponentsPythonRecipe):
         join('patches', 'prevent_libs_check.patch'),
         join('patches', 'ar.patch'),
         join('patches', 'lib.patch'),
-        join('patches', 'python-fixes.patch')
+        join('patches', 'python-fixes.patch'),
+        join('patches', 'fix-numpy-cpowf-android-6.patch')
     ]
 
     def get_recipe_env(self, arch):
@@ -40,7 +41,7 @@ class NumpyRecipe(CompiledComponentsPythonRecipe):
             flags += 'm'
 
         if flags not in env['CC']:
-            env['CC'] += flags
+            env['CC'] += flags  # + ' -DNPY_NO_SIGNAL'
         if flags not in env['LD']:
             env['LD'] += flags + ' -shared'
         return env
