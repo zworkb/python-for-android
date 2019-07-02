@@ -665,6 +665,30 @@ tools directory of the Android SDK.
                               'https://developer.android.com/guide/'
                               'topics/manifest/'
                               'activity-element.html'))
+
+    ap.add_argument('--android-entrypoint', dest='android_entrypoint',
+                    default='org.kivy.android.PythonActivity',
+                    help='defines which java class sill be used for startup, usually a subclass of PythonActivity')
+    ap.add_argument('--android-apptheme', dest='android_apptheme',
+                    default='@android:style/Theme.NoTitleBar',
+                    help='defines which app theme should be selected for the main activity')
+    ap.add_argument('--add-java-source-compat', dest='java_source_compat',
+                    default=[],
+                    action='append',
+                    help='add java source compatibility to gradle.build')
+    ap.add_argument('--add-java-target-compat', dest='java_target_compat',
+                    default=[],
+                    action='append',
+                    help='add java target compatibility to gradle.build')
+    ap.add_argument('--add-gradle-repository', dest='gradle_repositories',
+                    default=[],
+                    action='append',
+                    help='add a repository for gradle')
+    ap.add_argument('--add-packaging-option', dest='packaging_options',
+                    default=[],
+                    action='append',
+                    help='android packaging options')
+
     ap.add_argument('--wakelock', dest='wakelock', action='store_true',
                     help=('Indicate if the application needs the device '
                           'to stay on'))
