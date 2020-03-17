@@ -955,6 +955,8 @@ class ToolchainCL(object):
                 env['P4A_RELEASE_KEYALIAS_PASSWD'] = args.keystorepw
 
         build = imp.load_source('build', join(dist.dist_dir, 'build.py'))
+        is_library = (self.ctx.bootstrap.name == 'library')
+
         with current_directory(dist.dist_dir):
             self.hook("before_apk_build")
             os.environ["ANDROID_API"] = str(self.ctx.android_api)
@@ -1014,10 +1016,15 @@ class ToolchainCL(object):
 
                 # gradle output apks somewhere else
                 # and don't have version in file
-                apk_dir = join(dist.dist_dir,
-                               "build", "outputs", "apk",
-                               args.build_mode)
-                apk_glob = "*-{}.apk"
+                if is_library:
+                    apk_dir = join(dist.dist_dir,
+                                   "build", "outputs", "aar")
+                    apk_glob = "*-{}.aar"
+                else:
+                    apk_dir = join(dist.dist_dir,
+                                   "build", "outputs", "apk",
+                                   args.build_mode)
+                    apk_glob = "*-{}.apk"
                 apk_add_version = True
 
             else:
@@ -1036,7 +1043,7 @@ class ToolchainCL(object):
 
             self.hook("after_apk_assemble")
 
-        info_main('# Copying APK to current directory')
+        info_main('# Copying android package to current directory')
 
         apk_re = re.compile(r'.*Package: (.*\.apk)$')
         apk_file = None
@@ -1047,7 +1054,7 @@ class ToolchainCL(object):
                 break
 
         if not apk_file:
-            info_main('# APK filename not found in build output. Guessing...')
+            info_main('# Android package filename not found in build output. Guessing...')
             if args.build_mode == "release":
                 suffixes = ("release", "release-unsigned")
             else:
@@ -1063,13 +1070,13 @@ class ToolchainCL(object):
             else:
                 raise BuildInterruptingException('Couldn\'t find the built APK')
 
-        info_main('# Found APK file: {}'.format(apk_file))
+        info_main('# Found android package file: {}'.format(apk_file))
         if apk_add_version:
-            info('# Add version number to APK')
+            info('# Add version number to android package')
             apk_name = basename(apk_file)[:-len(APK_SUFFIX)]
             apk_file_dest = "{}-{}-{}".format(
                 apk_name, build_args.version, APK_SUFFIX)
-            info('# APK renamed to {}'.format(apk_file_dest))
+            info('# Android package renamed to {}'.format(apk_file_dest))
             shprint(sh.cp, apk_file, apk_file_dest)
         else:
             shprint(sh.cp, apk_file, './')
