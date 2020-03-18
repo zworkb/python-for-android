@@ -109,7 +109,7 @@ class Bootstrap(object):
         and optional dependencies are being used,
         and returns a list of these.'''
         recipes = []
-        built_recipes = self.ctx.recipe_build_order
+        built_recipes = self.ctx.recipe_build_order or []
         for recipe in self.recipe_depends:
             if isinstance(recipe, (tuple, list)):
                 for alternative in recipe:

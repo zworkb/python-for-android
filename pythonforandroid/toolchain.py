@@ -924,6 +924,8 @@ class ToolchainCL(object):
 
         ctx = self.ctx
         dist = self._dist
+        bs = Bootstrap.get_bootstrap(args.bootstrap, ctx)
+        ctx.prepare_bootstrap(bs)
 
         # Manually fixing these arguments at the string stage is
         # unsatisfactory and should probably be changed somehow, but
