@@ -4,10 +4,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+
+import android.os.Build;
 import android.content.Intent;
 import android.content.Context;
 import android.content.res.Resources;
 import android.util.Log;
+
 import org.renpy.android.AssetExtract;
 import org.kivy.android.PythonService;
 
@@ -36,7 +39,17 @@ public class Service{{ name|capitalize }} extends PythonService {
         intent.putExtra("androidUnpack", appRoot);
         intent.putExtra("pythonPath", appRoot + ":" + appRoot + "/lib");
         intent.putExtra("pythonServiceArgument", pythonServiceArgument);
+
+        //foreground: {{foreground}}
+        {% if foreground %}
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ctx.startForegroundService(intent);
+        } else {
+            ctx.startService(intent);
+        }
+        {% else %}
         ctx.startService(intent);
+        {% endif %}
     }
 
     public static String getAppRoot(Context ctx) {

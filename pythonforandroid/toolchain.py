@@ -921,7 +921,6 @@ class ToolchainCL(object):
     @require_prebuilt_dist
     def apk(self, args):
         """Create an APK using the given distribution."""
-
         ctx = self.ctx
         dist = self._dist
         bs = Bootstrap.get_bootstrap(args.bootstrap, ctx)
