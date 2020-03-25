@@ -141,7 +141,6 @@ class Bootstrap(object):
         '''Ensure that a build dir exists for the recipe. This same single
         dir will be used for building all different archs.'''
         self.build_dir = self.get_build_dir()
-        self.common_dir = self.get_common_dir()
 
         # get all bootstrap names along the inheritance path
         bootstrap_names = []
@@ -164,10 +163,6 @@ class Bootstrap(object):
         for bootstrap_dir in bootstrap_dirs:
             print(f"copying {bootstrap_dir}")
             copy_files(join(bootstrap_dir, 'build'), self.build_dir)
-
-        # copy_files(join(self.bootstrap_dir, 'build'), self.build_dir)
-        # copy_files(join(self.common_dir, 'build'), self.build_dir,
-        #            override=False)
 
         if self.ctx.symlink_java_src:
             # XXX: has also to be generalized as for the copy stuff above
