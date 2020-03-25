@@ -165,6 +165,8 @@ class Bootstrap(object):
             print(f"copying {bootstrap_dir}")
             copy_files(join(bootstrap_dir, 'build'), self.build_dir)
 
+        breakpoint()
+
         # copy_files(join(self.bootstrap_dir, 'build'), self.build_dir)
         # copy_files(join(self.common_dir, 'build'), self.build_dir,
         #            override=False)
