@@ -138,30 +138,20 @@ class Bootstrap(object):
         return modname.split(".", 2)[-1]
 
     def prepare_build_dir(self):
-        '''Ensure that a build dir exists for the recipe. This same single
-        dir will be used for building all different archs.'''
+        """Ensure that a build dir exists for the recipe. This same single
+        dir will be used for building all different archs."""
         self.build_dir = self.get_build_dir()
 
-        # get all bootstrap names along the inheritance path
-        bootstrap_names = []
-        klass = self.__class__
-
-        while klass.__bases__[0] is not object:
-            # parents.append(klass)
-            bootstrap_names.append(klass.name)
-            klass = klass.__bases__[0]
-        else:
-            bootstrap_names.append('common')
-
+        # get all bootstrap names along the __mro__, cutting off Bootstrap and object
+        classes = self.__class__.__mro__[:-2]
+        bootstrap_names = [cls.name for cls in classes] + ['common']
         bootstrap_dirs = [
             join(self.ctx.root_dir, 'bootstraps', bootstrap_name)
             for bootstrap_name
             in reversed(bootstrap_names)
         ]
-
         # now do a cumulative copy of all bootstrap dirs
         for bootstrap_dir in bootstrap_dirs:
-            print(f"copying {bootstrap_dir}")
             copy_files(join(bootstrap_dir, 'build'), self.build_dir)
 
         if self.ctx.symlink_java_src:
