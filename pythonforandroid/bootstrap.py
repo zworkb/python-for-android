@@ -14,7 +14,7 @@ from pythonforandroid.util import (
 from pythonforandroid.recipe import Recipe
 
 
-def copy_files(src_root, dest_root, override=True):
+def copy_files(src_root, dest_root, override=True, symlink=False):
     for root, dirnames, filenames in walk(src_root):
         for filename in filenames:
             subdir = normpath(root.replace(src_root, ""))
@@ -29,7 +29,10 @@ def copy_files(src_root, dest_root, override=True):
                 if override and os.path.exists(dest_file):
                     os.unlink(dest_file)
                 if not os.path.exists(dest_file):
-                    shutil.copy(src_file, dest_file)
+                    if symlink:
+                        os.symlink(src_file, dest_file)
+                    else:
+                        shutil.copy(src_file, dest_file)
             else:
                 os.makedirs(dest_file)
 
@@ -152,16 +155,8 @@ class Bootstrap(object):
         ]
         # now do a cumulative copy of all bootstrap dirs
         for bootstrap_dir in bootstrap_dirs:
-            copy_files(join(bootstrap_dir, 'build'), self.build_dir)
+            copy_files(join(bootstrap_dir, 'build'), self.build_dir, symlink=self.ctx.symlink_java_src)
 
-        if self.ctx.symlink_java_src:
-            # XXX: has also to be generalized as for the copy stuff above
-            info('Symlinking java src instead of copying')
-            shprint(sh.rm, '-r', join(self.build_dir, 'src'))
-            shprint(sh.mkdir, join(self.build_dir, 'src'))
-            for dirn in listdir(join(self.bootstrap_dir, 'build', 'src')):
-                shprint(sh.ln, '-s', join(self.bootstrap_dir, 'build', 'src', dirn),
-                        join(self.build_dir, 'src'))
         with current_directory(self.build_dir):
             with open('project.properties', 'w') as fileh:
                 fileh.write('target=android-{}'.format(self.ctx.android_api))
