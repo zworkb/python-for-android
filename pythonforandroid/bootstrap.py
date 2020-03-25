@@ -142,10 +142,35 @@ class Bootstrap(object):
         dir will be used for building all different archs.'''
         self.build_dir = self.get_build_dir()
         self.common_dir = self.get_common_dir()
-        copy_files(join(self.bootstrap_dir, 'build'), self.build_dir)
-        copy_files(join(self.common_dir, 'build'), self.build_dir,
-                   override=False)
+
+        # get all bootstrap names along the inheritance path
+        bootstrap_names = []
+        klass = self.__class__
+
+        while klass.__bases__[0] is not object:
+            # parents.append(klass)
+            bootstrap_names.append(klass.name)
+            klass = klass.__bases__[0]
+        else:
+            bootstrap_names.append('common')
+
+        bootstrap_dirs = [
+            join(self.ctx.root_dir, 'bootstraps', bootstrap_name)
+            for bootstrap_name
+            in reversed(bootstrap_names)
+        ]
+
+        # now do a cumulative copy of all bootstrap dirs
+        for bootstrap_dir in bootstrap_dirs:
+            print(f"copying {bootstrap_dir}")
+            copy_files(join(bootstrap_dir, 'build'), self.build_dir)
+
+        # copy_files(join(self.bootstrap_dir, 'build'), self.build_dir)
+        # copy_files(join(self.common_dir, 'build'), self.build_dir,
+        #            override=False)
+
         if self.ctx.symlink_java_src:
+            # XXX: has also to be generalized as for the copy stuff above
             info('Symlinking java src instead of copying')
             shprint(sh.rm, '-r', join(self.build_dir, 'src'))
             shprint(sh.mkdir, join(self.build_dir, 'src'))
