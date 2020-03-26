@@ -484,7 +484,9 @@ class Context(object):
             ', '.join([arch.arch for arch in self.archs])))
 
     def prepare_bootstrap(self, bs):
-        bs.ctx = self
+        if bs:
+            # XXX: this condition fixes tox ci tests, dont know when in reality we have no bootstrap
+            bs.ctx = self
         self.bootstrap = bs
         self.bootstrap.prepare_build_dir()
         self.bootstrap_build_dir = self.bootstrap.build_dir
