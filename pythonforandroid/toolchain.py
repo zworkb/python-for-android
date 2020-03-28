@@ -1022,7 +1022,6 @@ class ToolchainCL(object):
                     "Unknown build mode {} for apk()".format(args.build_mode))
             output = shprint(gradlew, gradle_task, _tail=20,
                              _critical=True, _env=env)
-            breakpoint()
             output_dir = join(dist.dist_dir, "build", "outputs", package_type)
             apk_glob = "*-{}.%s" % package_type
 
