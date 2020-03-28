@@ -139,7 +139,7 @@ def require_prebuilt_dist(func):
     """
 
     @wraps(func)
-    def wrapper_func(self, args):
+    def wrapper_func(self, args, **kw):
         ctx = self.ctx
         ctx.set_archs(self._archs)
         ctx.prepare_build_environment(user_sdk_dir=self.sdk_dir,
@@ -153,7 +153,7 @@ def require_prebuilt_dist(func):
             info_notify('No dist exists that meets your requirements, '
                         'so one will be built.')
             build_dist_from_args(ctx, dist, args)
-        func(self, args)
+        func(self, args, **kw)
     return wrapper_func
 
 
@@ -482,30 +482,27 @@ class ToolchainCL(object):
             action='store_true',
             help='Symlink the dist instead of copying')
 
-        parser_apk = add_parser(
-            subparsers,
-            'apk', help='Build an APK',
-            parents=[generic_parser])
+        parser_packaging = argparse.ArgumentParser(
+            parents = [generic_parser],
+            add_help=False,
+            description='common options for packaging (apk, aar)')
+
         # This is actually an internal argument of the build.py
         # (see pythonforandroid/bootstraps/common/build/build.py).
         # However, it is also needed before the distribution is finally
         # assembled for locating the setup.py / other build systems, which
         # is why we also add it here:
-        parser_apk.add_argument(
+        parser_packaging.add_argument(
             '--private', dest='private',
             help='the directory with the app source code files' +
                  ' (containing your main.py entrypoint)',
             required=False, default=None)
-        parser_apk.add_argument(
-            '--release', dest='build_mode', action='store_const',
-            const='release', default='debug',
-            help='Build the PARSER_APK. in Release mode')
-        parser_apk.add_argument(
+        parser_packaging.add_argument(
             '--use-setup-py', dest="use_setup_py",
             action='store_true', default=False,
             help="Process the setup.py of a project if present. " +
                  "(Experimental!")
-        parser_apk.add_argument(
+        parser_packaging.add_argument(
             '--ignore-setup-py', dest="ignore_setup_py",
             action='store_true', default=False,
             help="Don't run the setup.py of a project if present. " +
@@ -513,19 +510,33 @@ class ToolchainCL(object):
                  "designed to work inside p4a (e.g. by installing " +
                  "dependencies that won't work or aren't desired " +
                  "on Android")
-        parser_apk.add_argument(
+        parser_packaging.add_argument(
+            '--release', dest='build_mode', action='store_const',
+            const='release', default='debug',
+            help='Build the PARSER_APK. in Release mode')
+        parser_packaging.add_argument(
             '--keystore', dest='keystore', action='store', default=None,
             help=('Keystore for JAR signing key, will use jarsigner '
                   'default if not specified (release build only)'))
-        parser_apk.add_argument(
+        parser_packaging.add_argument(
             '--signkey', dest='signkey', action='store', default=None,
             help='Key alias to sign PARSER_APK. with (release build only)')
-        parser_apk.add_argument(
+        parser_packaging.add_argument(
             '--keystorepw', dest='keystorepw', action='store', default=None,
             help='Password for keystore')
-        parser_apk.add_argument(
+        parser_packaging.add_argument(
             '--signkeypw', dest='signkeypw', action='store', default=None,
             help='Password for key alias')
+
+        parser_aar = add_parser(
+            subparsers,
+            'aar', help='Build an AAR',
+            parents=[parser_packaging])
+
+        parser_apk = add_parser(
+            subparsers,
+            'apk', help='Build an APK',
+            parents=[parser_packaging])
 
         add_parser(
             subparsers,
@@ -668,7 +679,8 @@ class ToolchainCL(object):
         self.ctx.copy_libs = args.copy_libs
 
         # Each subparser corresponds to a method
-        getattr(self, args.subparser_name.replace('-', '_'))(args)
+        command = args.subparser_name.replace('-', '_')
+        getattr(self, command)(args)
 
     @staticmethod
     def warn_on_carriage_return_args(args):
@@ -918,18 +930,14 @@ class ToolchainCL(object):
         ctx.distribution = dist
         return dist
 
-    @require_prebuilt_dist
-    def apk(self, args):
-        """Create an APK using the given distribution."""
-        ctx = self.ctx
-        dist = self._dist
-        bs = Bootstrap.get_bootstrap(args.bootstrap, ctx)
-        ctx.prepare_bootstrap(bs)
+    def _fix_args(self, args):
 
         # Manually fixing these arguments at the string stage is
         # unsatisfactory and should probably be changed somehow, but
         # we can't leave it until later as the build.py scripts assume
         # they are in the current directory.
+        # works in-place
+
         fix_args = ('--dir', '--private', '--add-jar', '--add-source',
                     '--whitelist', '--blacklist', '--presplash', '--icon')
         unknown_args = args.unknown_args
@@ -942,6 +950,10 @@ class ToolchainCL(object):
                 elif i + 1 < len(unknown_args):
                     unknown_args[i+1] = realpath(expanduser(unknown_args[i+1]))
 
+    def _prepare_release_env(self, args):
+        """
+        prepares envitonment dict with the necessary flags for signing an apk
+        """
         env = os.environ.copy()
         if args.build_mode == 'release':
             if args.keystore:
@@ -955,8 +967,18 @@ class ToolchainCL(object):
             elif args.keystorepw and 'P4A_RELEASE_KEYALIAS_PASSWD' not in env:
                 env['P4A_RELEASE_KEYALIAS_PASSWD'] = args.keystorepw
 
+        return env
+
+    def _build_package(self, args, package_type):
+        """Create an APK using the given distribution."""
+        ctx = self.ctx
+        dist = self._dist
+        bs = Bootstrap.get_bootstrap(args.bootstrap, ctx)
+        ctx.prepare_bootstrap(bs)
+
+        self._fix_args(args)
+        env = self._prepare_release_env(args)
         build = imp.load_source('build', join(dist.dist_dir, 'build.py'))
-        is_library = (self.ctx.bootstrap.name == 'library')
 
         with current_directory(dist.dist_dir):
             self.hook("before_apk_build")
@@ -964,83 +986,53 @@ class ToolchainCL(object):
             build_args = build.parse_args(args.unknown_args)
             self.hook("after_apk_build")
             self.hook("before_apk_assemble")
+            build_tools_versions = os.listdir(join(ctx.sdk_dir,
+                                                   'build-tools'))
+            build_tools_versions = sorted(build_tools_versions,
+                                          key=LooseVersion)
+            build_tools_version = build_tools_versions[-1]
+            info(('Detected highest available build tools '
+                  'version to be {}').format(build_tools_version))
 
-            build_type = ctx.java_build_tool
-            if build_type == 'auto':
-                info('Selecting java build tool:')
+            if build_tools_version < '25.0':
+                raise BuildInterruptingException(
+                    'build_tools >= 25 is required, but %s is installed' % build_tools_version)
+            if not exists("gradlew"):
+                raise BuildInterruptingException("gradlew file is missing")
 
-                build_tools_versions = os.listdir(join(ctx.sdk_dir,
-                                                       'build-tools'))
-                build_tools_versions = sorted(build_tools_versions,
-                                              key=LooseVersion)
-                build_tools_version = build_tools_versions[-1]
-                info(('Detected highest available build tools '
-                      'version to be {}').format(build_tools_version))
+            env["ANDROID_NDK_HOME"] = self.ctx.ndk_dir
+            env["ANDROID_HOME"] = self.ctx.sdk_dir
 
-                if build_tools_version >= '25.0' and exists('gradlew'):
-                    build_type = 'gradle'
-                    info('    Building with gradle, as gradle executable is '
-                         'present')
-                else:
-                    build_type = 'ant'
-                    if build_tools_version < '25.0':
-                        info(('    Building with ant, as the highest '
-                              'build-tools-version is only {}').format(
-                            build_tools_version))
-                    else:
-                        info('    Building with ant, as no gradle executable '
-                             'detected')
+            gradlew = sh.Command('./gradlew')
 
-            if build_type == 'gradle':
-                # gradle-based build
-                env["ANDROID_NDK_HOME"] = self.ctx.ndk_dir
-                env["ANDROID_HOME"] = self.ctx.sdk_dir
-
-                gradlew = sh.Command('./gradlew')
-                if exists('/usr/bin/dos2unix'):
-                    # .../dists/bdisttest_python3/gradlew
-                    # .../build/bootstrap_builds/sdl2-python3/gradlew
-                    # if docker on windows, gradle contains CRLF
-                    output = shprint(
-                        sh.Command('dos2unix'), gradlew._path.decode('utf8'),
-                        _tail=20, _critical=True, _env=env
-                    )
-                if args.build_mode == "debug":
-                    gradle_task = "assembleDebug"
-                elif args.build_mode == "release":
-                    gradle_task = "assembleRelease"
-                else:
-                    raise BuildInterruptingException(
-                        "Unknown build mode {} for apk()".format(args.build_mode))
-                output = shprint(gradlew, gradle_task, _tail=20,
-                                 _critical=True, _env=env)
-
-                # gradle output apks somewhere else
-                # and don't have version in file
-                if is_library:
-                    apk_dir = join(dist.dist_dir,
-                                   "build", "outputs", "aar")
-                    apk_glob = "*-{}.aar"
-                else:
-                    apk_dir = join(dist.dist_dir,
-                                   "build", "outputs", "apk",
-                                   args.build_mode)
-                    apk_glob = "*-{}.apk"
-                apk_add_version = True
-
+            if exists('/usr/bin/dos2unix'):
+                # .../dists/bdisttest_python3/gradlew
+                # .../build/bootstrap_builds/sdl2-python3/gradlew
+                # if docker on windows, gradle contains CRLF
+                output = shprint(
+                    sh.Command('dos2unix'), gradlew._path.decode('utf8'),
+                    _tail=20, _critical=True, _env=env
+                )
+            if args.build_mode == "debug":
+                gradle_task = "assembleDebug"
+            elif args.build_mode == "release":
+                gradle_task = "assembleRelease"
             else:
-                # ant-based build
-                try:
-                    ant = sh.Command('ant')
-                except sh.CommandNotFound:
-                    raise BuildInterruptingException(
-                        'Could not find ant binary, please install it '
-                        'and make sure it is in your $PATH.')
-                output = shprint(ant, args.build_mode, _tail=20,
-                                 _critical=True, _env=env)
-                apk_dir = join(dist.dist_dir, "bin")
-                apk_glob = "*-*-{}.apk"
-                apk_add_version = False
+                raise BuildInterruptingException(
+                    "Unknown build mode {} for apk()".format(args.build_mode))
+            output = shprint(gradlew, gradle_task, _tail=20,
+                             _critical=True, _env=env)
+            breakpoint()
+            output_dir = join(dist.dist_dir, "build", "outputs", package_type)
+            apk_glob = "*-{}.%s" % package_type
+
+            is_library = package_type == 'aar'
+            if is_library:
+                apk_dir = output_dir
+            else:
+                apk_dir = join(output_dir, args.build_mode)
+
+            apk_add_version = True
 
             self.hook("after_apk_assemble")
 
@@ -1081,6 +1073,14 @@ class ToolchainCL(object):
             shprint(sh.cp, apk_file, apk_file_dest)
         else:
             shprint(sh.cp, apk_file, './')
+
+    @require_prebuilt_dist
+    def apk(self, args):
+        return self._build_package(args, package_type='apk')
+
+    @require_prebuilt_dist
+    def aar(self, args):
+        return self._build_package(args, package_type='aar')
 
     @require_prebuilt_dist
     def create(self, args):
