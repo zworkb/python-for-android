@@ -150,7 +150,7 @@ class TestBootstrapBasic(BaseClassSetupBootstrap, unittest.TestCase):
         expected_bootstraps = {
             "empty",
             "service_only",
-            "library",
+            "service_library",
             "webview",
             "sdl2",
         }

@@ -41,7 +41,7 @@ class AndroidRecipe(IncludedFilesBehaviour, CythonRecipe):
         is_webview = bootstrap_name == 'webview'
         is_service_only = bootstrap_name == 'service_only'
 
-        if is_sdl2 or is_webview or is_service_only or bootstrap_name == 'library':
+        if is_sdl2 or is_webview or is_service_only or bootstrap_name == 'service_library':
             if is_sdl2:
                 bootstrap = 'sdl2'
             java_ns = u'org.kivy.android'

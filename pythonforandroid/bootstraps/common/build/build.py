@@ -274,7 +274,7 @@ def compile_dir(dfn, optimize_python=True):
 def make_package(args):
     # If no launcher is specified, require a main.py/main.pyo:
     if (get_bootstrap_name() != "sdl" or args.launcher is None) and \
-            get_bootstrap_name() not in ["webview", "library"]:
+            get_bootstrap_name() not in ["webview", "service_library"]:
         # (webview doesn't need an entrypoint, apparently)
         if args.private is None or (
                 not exists(join(realpath(args.private), 'main.py')) and
@@ -530,7 +530,7 @@ main.py that loads it.''')
         jars=jars,
         android_api=android_api,
         build_tools_version=build_tools_version,
-        is_library=get_bootstrap_name() == 'library',
+        is_library=get_bootstrap_name() == 'service_library',
     )
 
     # ant build templates
