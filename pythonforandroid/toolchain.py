@@ -930,13 +930,16 @@ class ToolchainCL(object):
         ctx.distribution = dist
         return dist
 
-    def _fix_args(self, args):
-
-        # Manually fixing these arguments at the string stage is
-        # unsatisfactory and should probably be changed somehow, but
-        # we can't leave it until later as the build.py scripts assume
-        # they are in the current directory.
-        # works in-place
+    @staticmethod
+    def _fix_args(args):
+        """
+        Manually fixing these arguments at the string stage is
+        unsatisfactory and should probably be changed somehow, but
+        we can't leave it until later as the build.py scripts assume
+        they are in the current directory.
+        works in-place
+        :param args: parser args
+        """
 
         fix_args = ('--dir', '--private', '--add-jar', '--add-source',
                     '--whitelist', '--blacklist', '--presplash', '--icon')
@@ -950,9 +953,11 @@ class ToolchainCL(object):
                 elif i + 1 < len(unknown_args):
                     unknown_args[i+1] = realpath(expanduser(unknown_args[i+1]))
 
-    def _prepare_release_env(self, args):
+    @staticmethod
+    def _prepare_release_env(args):
         """
         prepares envitonment dict with the necessary flags for signing an apk
+        :param args: parser args
         """
         env = os.environ.copy()
         if args.build_mode == 'release':
@@ -970,7 +975,12 @@ class ToolchainCL(object):
         return env
 
     def _build_package(self, args, package_type):
-        """Create an APK using the given distribution."""
+        """
+        Creates an android package using gradle
+        :param args: parser args
+        :param package_type: one of 'apk', 'aar'
+        :return (gradle output, build_args)
+        """
         ctx = self.ctx
         dist = self._dist
         bs = Bootstrap.get_bootstrap(args.bootstrap, ctx)
@@ -978,12 +988,13 @@ class ToolchainCL(object):
 
         self._fix_args(args)
         env = self._prepare_release_env(args)
-        build = imp.load_source('build', join(dist.dist_dir, 'build.py'))
 
         with current_directory(dist.dist_dir):
             self.hook("before_apk_build")
             os.environ["ANDROID_API"] = str(self.ctx.android_api)
-            build_args = build.parse_args(args.unknown_args)
+            build = imp.load_source('build', join(dist.dist_dir, 'build.py'))
+            build_args = build.parse_args(args.unknown_args) # this call triggers build.make_package()
+
             self.hook("after_apk_build")
             self.hook("before_apk_assemble")
             build_tools_versions = os.listdir(join(ctx.sdk_dir,
@@ -1022,64 +1033,72 @@ class ToolchainCL(object):
                     "Unknown build mode {} for apk()".format(args.build_mode))
             output = shprint(gradlew, gradle_task, _tail=20,
                              _critical=True, _env=env)
-            output_dir = join(dist.dist_dir, "build", "outputs", package_type)
-            apk_glob = "*-{}.%s" % package_type
+            return output, build_args
 
-            is_library = package_type == 'aar'
-            if is_library:
-                apk_dir = output_dir
-            else:
-                apk_dir = join(output_dir, args.build_mode)
-
-            apk_add_version = True
+    def _finish_package(self, args, output, build_args, package_type, output_dir):
+        """
+        Finishes the package after the gradle script run
+        :param args: the parser args
+        :param output: RunningCommand output
+        :param build_args: build args as returned by build.parse_args
+        :param package_type: one of 'apk', 'aar'
+        :param output_dir: where to put the package file
+        """
+        dist = self._dist
+        with current_directory(self._dist.dist_dir):
+            package_glob = "*-{}.%s" % package_type
+            package_add_version = True
 
             self.hook("after_apk_assemble")
 
-        info_main('# Copying android package to current directory')
+            info_main('# Copying android package to current directory')
 
-        apk_re = re.compile(r'.*Package: (.*\.apk)$')
-        apk_file = None
-        for line in reversed(output.splitlines()):
-            m = apk_re.match(line)
-            if m:
-                apk_file = m.groups()[0]
-                break
-
-        if not apk_file:
-            info_main('# Android package filename not found in build output. Guessing...')
-            if args.build_mode == "release":
-                suffixes = ("release", "release-unsigned")
-            else:
-                suffixes = ("debug", )
-            for suffix in suffixes:
-                apks = glob.glob(join(apk_dir, apk_glob.format(suffix)))
-                if apks:
-                    if len(apks) > 1:
-                        info('More than one built APK found... guessing you '
-                             'just built {}'.format(apks[-1]))
-                    apk_file = apks[-1]
+            package_re = re.compile(r'.*Package: (.*\.apk)$')
+            package_file = None
+            for line in reversed(output.splitlines()):
+                m = package_re.match(line)
+                if m:
+                    package_file = m.groups()[0]
                     break
-            else:
-                raise BuildInterruptingException('Couldn\'t find the built APK')
+            if not package_file:
+                info_main('# Android package filename not found in build output. Guessing...')
+                if args.build_mode == "release":
+                    suffixes = ("release", "release-unsigned")
+                else:
+                    suffixes = ("debug", )
+                for suffix in suffixes:
+                    package_files = glob.glob(join(output_dir, package_glob.format(suffix)))
+                    if package_files:
+                        if len(package_files) > 1:
+                            info('More than one built APK found... guessing you '
+                                 'just built {}'.format(package_files[-1]))
+                        package_file = package_files[-1]
+                        break
+                else:
+                    raise BuildInterruptingException('Couldn\'t find the built APK')
 
-        info_main('# Found android package file: {}'.format(apk_file))
-        if apk_add_version:
-            info('# Add version number to android package')
-            apk_name = basename(apk_file)[:-len(APK_SUFFIX)]
-            apk_file_dest = "{}-{}-{}".format(
-                apk_name, build_args.version, APK_SUFFIX)
-            info('# Android package renamed to {}'.format(apk_file_dest))
-            shprint(sh.cp, apk_file, apk_file_dest)
-        else:
-            shprint(sh.cp, apk_file, './')
+            info_main('# Found android package file: {}'.format(package_file))
+            if package_add_version:
+                info('# Add version number to android package')
+                package_name = basename(package_file)[:-len(APK_SUFFIX)]
+                package_file_dest = "{}-{}-{}".format(
+                    package_name, build_args.version, APK_SUFFIX)
+                info('# Android package renamed to {}'.format(package_file_dest))
+                shprint(sh.cp, package_file, package_file_dest)
+            else:
+                shprint(sh.cp, package_file, './')
 
     @require_prebuilt_dist
     def apk(self, args):
-        return self._build_package(args, package_type='apk')
+        output, build_args = self._build_package(args, package_type='apk')
+        output_dir = join(self._dist.dist_dir, "build", "outputs", 'apk', args.build_mode)
+        self._finish_package(args, output, build_args, 'apk', output_dir)
 
     @require_prebuilt_dist
     def aar(self, args):
-        return self._build_package(args, package_type='aar')
+        output, build_args = self._build_package(args, package_type='aar')
+        output_dir = join(self._dist.dist_dir, "build", "outputs", 'aar')
+        self._finish_package(args, output, build_args, 'aar', output_dir)
 
     @require_prebuilt_dist
     def create(self, args):
