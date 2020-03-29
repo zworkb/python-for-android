@@ -16,7 +16,6 @@ def argv_contains(t):
 
 
 class Bdist(Command):
-    description = 'Create an APK with python-for-android'
 
     user_options = []
 
@@ -133,14 +132,22 @@ class Bdist(Command):
 
 
 class BdistAPK(Bdist):
-    """"""
+    """
+    distutil command handler for 'apk'
+    """
+    description = 'Create an APK with python-for-android'
+
     @property
     def package_type(self):
         return "apk"
 
 
 class BdistAAR(Bdist):
-    """"""
+    """
+    distutil command handler for 'aar'
+    """
+    description = 'Create an AAR with python-for-android'
+
     @property
     def package_type(self):
         return "aar"
