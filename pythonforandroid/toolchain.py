@@ -1043,48 +1043,48 @@ class ToolchainCL:
         :param output_dir: where to put the package file
         """
 
-        with current_directory(self._dist.dist_dir):
-            package_glob = "*-{}.%s" % package_type
-            package_add_version = True
+        package_glob = "*-{}.%s" % package_type
+        package_add_version = True
 
-            self.hook("after_apk_assemble")
+        self.hook("after_apk_assemble")
 
-            info_main('# Copying android package to current directory')
+        info_main('# Copying android package to current directory')
 
-            package_re = re.compile(r'.*Package: (.*\.apk)$')
-            package_file = None
-            for line in reversed(output.splitlines()):
-                m = package_re.match(line)
-                if m:
-                    package_file = m.groups()[0]
-                    break
-            if not package_file:
-                info_main('# Android package filename not found in build output. Guessing...')
-                if args.build_mode == "release":
-                    suffixes = ("release", "release-unsigned")
-                else:
-                    suffixes = ("debug", )
-                for suffix in suffixes:
-                    package_files = glob.glob(join(output_dir, package_glob.format(suffix)))
-                    if package_files:
-                        if len(package_files) > 1:
-                            info('More than one built APK found... guessing you '
-                                 'just built {}'.format(package_files[-1]))
-                        package_file = package_files[-1]
-                        break
-                else:
-                    raise BuildInterruptingException('Couldn\'t find the built APK')
-
-            info_main('# Found android package file: {}'.format(package_file))
-            if package_add_version:
-                info('# Add version number to android package')
-                package_name = basename(package_file)[:-len(APK_SUFFIX)]
-                package_file_dest = "{}-{}-{}".format(
-                    package_name, build_args.version, APK_SUFFIX)
-                info('# Android package renamed to {}'.format(package_file_dest))
-                shprint(sh.cp, package_file, package_file_dest)
+        package_re = re.compile(r'.*Package: (.*\.apk)$')
+        package_file = None
+        for line in reversed(output.splitlines()):
+            m = package_re.match(line)
+            if m:
+                package_file = m.groups()[0]
+                break
+        if not package_file:
+            info_main('# Android package filename not found in build output. Guessing...')
+            if args.build_mode == "release":
+                suffixes = ("release", "release-unsigned")
             else:
-                shprint(sh.cp, package_file, './')
+                suffixes = ("debug", )
+            for suffix in suffixes:
+
+                package_files = glob.glob(join(output_dir, package_glob.format(suffix)))
+                if package_files:
+                    if len(package_files) > 1:
+                        info('More than one built APK found... guessing you '
+                             'just built {}'.format(package_files[-1]))
+                    package_file = package_files[-1]
+                    break
+            else:
+                raise BuildInterruptingException('Couldn\'t find the built APK')
+
+        info_main('# Found android package file: {}'.format(package_file))
+        if package_add_version:
+            info('# Add version number to android package')
+            package_name = basename(package_file)[:-len(APK_SUFFIX)]
+            package_file_dest = "{}-{}-{}".format(
+                package_name, build_args.version, APK_SUFFIX)
+            info('# Android package renamed to {}'.format(package_file_dest))
+            shprint(sh.cp, package_file, package_file_dest)
+        else:
+            shprint(sh.cp, package_file, './')
 
     @require_prebuilt_dist
     def apk(self, args):
