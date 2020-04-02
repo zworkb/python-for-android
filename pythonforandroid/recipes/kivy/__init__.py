@@ -10,6 +10,10 @@ class KivyRecipe(CythonRecipe):
     url = 'https://github.com/kivy/kivy/archive/{version}.zip'
     name = 'kivy'
 
+    version = '2.0.0.dev0'
+    url = 'https://github.com/zworkb/kivy/archive/20dev.zip'
+    #url = 'file:///ohome/phil/dev/projects/kivy/kivy.master/master.zip'
+
     depends = ['sdl2', 'pyjnius', 'setuptools']
     python_depends = ['certifi']
 
